@@ -1,0 +1,259 @@
+---
+emoji: ⌨
+title: KSNET
+description: KSNET 결제창 연동가이드를 확인합니다.
+---
+
+import * as prose from "~/components/prose";
+export const components = prose;
+
+import Figure from "~/components/gitbook/Figure.astro";
+import image1 from "./_assets/ksnet//ksnet_1.png";
+import Tabs from "~/components/gitbook/tabs/Tabs.astro";
+import Tab from "~/components/gitbook/tabs/Tab.astro";
+import Details from "~/components/gitbook/Details.astro";
+
+### KSNET PG 설정하기
+
+- [**KSNET 설정**](../../ready/2-pg/payment-gateway/ksnet) 페이지의 내용을 참고하여 PG 설정을 진행합니다.
+
+### 가능한 결제수단
+
+- **일반 결제**
+  - `payMethod`파라미터를 결제수단에 따라 아래와 같이 설정해야 합니다.
+    - 신용카드 : `CARD`
+    - 실시간 계좌이체 : `TRANSFER`
+    - 가상계좌 : `VIRTUAL_ACCOUNT`
+    - 휴대폰 소액결제 : `MOBILE`
+    - 간편 결제 : `EASY_PAY`
+- **빌링키 발급**
+  - `billingKeyMethod`(빌링키 발급) 파라미터를 `CARD`로 설정해야 합니다.
+
+### SDK 결제 및 빌링키 발급 요청하기
+
+결제 요청 시에는 `requestPayment` 함수를 호출야합니다. `channelKey`파라미터에 결제 채널 연동 시 생성된 채널 키값을 지정하여 KSNET 연동임을 명시해주세요.
+만약 `channelKey`가 입력되지 않는 경우 `pgProvider` 파라미터에 입력된 값에 따라 결제창이 호출됩니다.
+
+KSNET 기준으로 작성한 예시 코드는 아래와 같습니다.
+
+<Tabs>
+<Tab title="SDK 결제 요청">
+  ```javascript
+    import * as PortOne from '@portone/browser-sdk/v2';
+    function requestPayment() {
+      PortOne.requestPayment({
+        storeId: 'store-4ff4af41-85e3-4559-8eb8-0d08a2c6ceec', // 가맹점 storeId로 변경해주세요.
+        paymentId: 'paymentId_{now()}',
+        orderName: '나이키 와플 트레이너 2 SD',
+        totalAmount: 1000,
+        currency: 'CURRENCY_KRW',
+        channelKey: 'channel-key-9987cb87-6458-4888-b94e-68d9a2da896d', // 콘솔 결제 연동 화면에서 채널 연동 시 생성된 채널 키를 입력해주세요.
+        payMethod: "CARD"
+      });
+    }
+    ```
+
+</Tab>
+</Tabs>
+
+### API 키인(수기)결제 및 빌링키 발급 및 예약/반복 결제 요청하기
+
+키인(수기)로 결제하기 위해서는 `POST /payments/{payment_id}/instant/pay`를 이용하여 결제 요청을 해야합니다.
+그리고 빌링키를 발급하기 위해서는 `POST /billing-keys`를 이용하여 빌링키 발급 요청을 해야합니다. 이후 발급된 빌링키로 예약/반복 결제를 하기위해 `POST /payments/${PAYMENT_ID_HERE}/schedules` 를 이용하여 결제를 예약합니다.
+
+<Tabs>
+<Tab title="API 키인(수기) 결제 요청">
+  ```javascript
+  // ... 키인(수기) 결제
+    const issueResponse = await axios({
+      url: `https://api.portone.io/v2/payments/${PAYMENT_ID_HERE}/instant/pay`,
+      method: "post",
+      headers: { "Authorization": "Bearer " + access_token },
+      data: {
+        channel_key,
+        order_name,
+        total_amount,
+        product_type,
+        customer : {
+          customer_id,
+          customer_name : {
+            first_name,
+            last_name
+          },  
+        },
+        currency,
+        payment_method_option: {
+          card: {
+            card_credential: {
+              card_number,
+              expiry_month,
+              expiry_year,
+              birth_or_business_registration_number,
+              password_two_digits
+            },
+          },
+        },
+      }
+    });
+  ```
+</Tab>
+
+<Tab title="API 빌링키 발급 요청">
+  ```javascript
+  // ... 빌링키 발급
+    const issueResponse = await axios({
+      url: "https://api.portone.io/v2/billing-keys",
+      method: "post",
+      headers: { "Authorization": "Bearer " + access_token },
+      data: {
+        channel_key,
+        customer: {
+          customer_id,
+        },
+        payment_method_option: {
+          card: {
+            card_credential: {
+              card_number,
+              expiry_month,
+              expiry_year,
+              birth_or_business_registration_number,
+              password_two_digits
+            },
+          },
+        },
+      }
+    });
+  ```
+</Tab>
+
+<Tab title="API 예약/반복 결제">
+ ```javascript
+  async function schedulePayment() {
+    // 1. 포트원 API를 사용하기 위한 액세스 토큰 발급 받기를 진행해주세요.
+    // 2. 포트원 결제 예약 API 호출
+    const response = await axios({
+      url: `https://api.portone.io/v2/payments/${PAYMENT_ID_HERE}/schedules`,
+      method: "post",
+      // 1번에서 발급받은 액세스 토큰을 Bearer 형식에 맞게 넣어주세요.
+      headers: { Authorization: "Bearer " + access_token },
+      data: {
+        payment_id: UNIQUE_PAYMENT_ID,
+        billing_key: BILLING_KEY_HERE,
+        order_name: "월간 이용권 정기결제",
+        customer: {
+          customer_id: CUSTOMER_ID_HERE,
+          // 고객 정보가 필요한 경우 API 명세에 따라 추가해주세요.
+        },
+        total_amount: 8900,
+        currency: "KRW",
+        scheduled_at: "2023-08-24T14:15:22Z", // 결제를 시도할 시각
+      },
+    });
+    // 결제 예약 이후 로직을 구성해주세요.
+}
+```
+</Tab>
+</Tabs>
+
+### 주요 파라미터
+
+- `storeId` <mark style="color:red;">**\***</mark> <mark style="color:green;">**string**</mark>
+  - 가맹점의 상점을 식별하는 고유한 값입니다.
+- `paymentId` <mark style="color:red;">**\***</mark> <mark style="color:green;">**string**</mark>
+  - 가맹점이 채번하는 주문 고유 번호로 매번 고유하게 채번되어야 합니다.
+- `orderName` <mark style="color:red;">**\***</mark> <mark style="color:green;">**string**</mark>
+  - 주문명으로 가맹점에서 자유롭게 입력합니다.
+- `channelName` <mark style="color:red;">**\***</mark> <mark style="color:green;">**string**</mark>
+  - 채널 이름으로 콘솔에서 결제 연동에 채널 연동 시 입력한 채널 이름을 입력해야 합니다.
+- `totalAmount` <mark style="color:red;">**\***</mark> <mark style="color:purple;">**number**</mark>
+  - 결제 금액으로 결제를 원하는 통화(currency)별 scale factor(소수점 몇번째 자리까지 유효한지)를 고려한 number 형식만 허용됩니다.
+- `currency` <mark style="color:red;">**\***</mark> <mark style="color:green;">**string**</mark>
+  - 결제통화로 원화 결제를 원할 시 `KRW`로 입력해야 합니다.
+- `payMethod` <mark style="color:red;">**\***</mark> <mark style="color:green;">**string**</mark>
+  - 결제수단을 구분하는 코드로 원하는 결제수단 값을 입력해야 합니다.
+- `taxFreeAmount` <mark style="color:purple;">**number**</mark>
+  - 면세 금액으로 KSNET과 상점아이디 계약시 복합과세로 계약한 경우 면세금액을 반드시 입력해야 합니다.
+- `customer.fullName` <mark style="color:red;">**\***</mark> <mark style="color:green;">**string**</mark>
+  - 구매자 이름으로 KSNET의 경우 필수로 입력해야 합니다.
+
+### 유의할 파라미터 - SDK
+
+#### 결제/빌링키 발급 공통
+
+- `windowType`
+
+  - 토스페이먼츠의 경우 PC는 `IFRAME`, mobile은 `REDIRECTION`만 지원되며 이외의 다른 방식으로 결제창을 호출할 경우 에러를 리턴합니다.
+  - `windowType` 파라미터를 채우지 않을 경우 자동으로 아래와 같이 세팅됩니다.
+
+    ```json
+    {
+      "pc": "IFRAME",
+      "mobile": "REDIRECTION"
+    }
+    ```
+
+- `locale`
+  - 토스페이먼츠의 경우 `KO_KR`만 지원합니다. 이외의 값을 넣어도 무시됩니다.
+- `redirectUrl`
+  - 모바일 환경에서 결제 요청 시 `REDIRECTION` 타입이므로, 필수로 입력해야 합니다.
+
+#### 결제 (`requestPayment`)
+
+- `easyPay`
+  - `easyPayProvider`
+    - 간편결제 결제 요청 시, 사용하고자 하는 간편 결제사에 따라 아래 목록을 참고하여 `easyPayProvider` 파라미터를 입력해야 합니다.
+      - 페이코 : `PAYCO`
+      - 삼성페이 : `SAMSUNGPAY`
+      - SSG페이 : `SSGPAY`
+      - 카카오페이 : `KAKAOPAY`
+      - 네이버페이 : `NAVERPAY`
+      - L페이 : `LPAY`
+      - 토스페이 : `TOSSPAY`
+      - 애플페이 : `APPLEPAY`
+- `digital` <mark style="color:green;">**string**</mark>
+  - 휴대폰 결제인 경우 필수로 입력해야 하며, KSNET의 상점아이디에 설정된 상품 유형과 일치해야 합니다. 디지털 상품유형으로 설정된 경우 항상 `true`로 입력해야 합니다.
+- `vbank_due` <mark style="color:green;">**string**</mark>
+
+  - 가상계좌 입금 기한으로 가상계좌 결제 요청 시 필수로 입력해야 합니다. 단, 아래 형식만 유효합니다.
+    <Details>
+<p slot="summary"> 파라미터 사용 예시 </p>
+  - 예1. 2023-01-13 23:59:59
+  - 예2. 2023-01-13 (2023-01-13 23:59:59로 자동 적용)
+  - 예3. 20230113235959
+  - 예4. 20230113 (20230113235959로 자동 적용)
+    </Details>
+
+- `paymentId`
+  - 토스페이먼츠를 사용하는 경우 영문 대소문자, 숫자, 특수문자(-,\_)만 허용되며, 6자 이상 64자 이하만 가능합니다.
+- `currency`
+  - 토스페이먼츠의 경우 원화 결제만 지원하므로 `KRW` 이외의 값을 넣으면 에러를 리턴합니다.
+- `isCulturalExpense`
+  - 문화비(도서, 공연, 박물관 등) 지출 여부를 구분하고자 할 때 파라미터를 입력하여 사용할 수 있습니다.
+- `bypass`
+
+  - 토스페이먼츠에서는 아래의 파라미터를 지원합니다.
+  - `tosspayments`
+
+    - `discountCode`
+
+      - 토스페이먼츠와 가맹점 간의 계약에 따라 프로모션을 적용할 수 있습니다.
+
+      ```json
+      {
+        "tosspayments": {
+          "discountCode": "즉시 할인 코드(카드사 고유 번호)"
+        }
+      }
+      ```
+
+    - `useInternationalCardOnly`
+
+      - 해외 카드로만 결제가 가능하도록 설정할 수 있습니다.
+
+      ```json
+      {
+        "tosspayments": {
+          "useInternationalCardOnly": true
+        }
+      }
+      ```
