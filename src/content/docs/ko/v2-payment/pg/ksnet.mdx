@@ -8,7 +8,7 @@ import * as prose from "~/components/prose";
 export const components = prose;
 
 import Figure from "~/components/gitbook/Figure.astro";
-import image1 from "./_assets/ksnet//ksnet_1.png";
+import image1 from "./_assets/ksnet/ksnet_1.png";
 import Tabs from "~/components/gitbook/tabs/Tabs.astro";
 import Tab from "~/components/gitbook/tabs/Tab.astro";
 import Details from "~/components/gitbook/Details.astro";
@@ -73,93 +73,95 @@ KSNET 기준으로 작성한 예시 코드는 아래와 같습니다.
 <Tab title="API 키인(수기) 결제 요청">
   ```javascript
   // ... 키인(수기) 결제
-    const issueResponse = await axios({
-      url: `https://api.portone.io/v2/payments/${PAYMENT_ID_HERE}/instant/pay`,
-      method: "post",
-      headers: { "Authorization": "Bearer " + access_token },
-      data: {
-        channel_key,
-        order_name,
-        total_amount,
-        product_type,
-        customer : {
-          customer_id,
-          customer_name : {
-            first_name,
-            last_name
-          },  
-        },
-        currency,
-        payment_method_option: {
-          card: {
-            card_credential: {
-              card_number,
-              expiry_month,
-              expiry_year,
-              birth_or_business_registration_number,
-              password_two_digits
-            },
+  const issueResponse = await axios({
+    url: `https://api.portone.io/v2/payments/${PAYMENT_ID_HERE}/instant/pay`,
+    method: "post",
+    headers: { "Authorization": "Bearer " + access_token },
+    data: {
+      channel_key,
+      order_name,
+      total_amount,
+      product_type,
+      customer : {
+        customer_id,
+        customer_name : {
+          first_name,
+          last_name
+        },  
+      },
+      currency,
+      payment_method_option: {
+        card: {
+          card_credential: {
+            card_number,
+            expiry_month,
+            expiry_year,
+            birth_or_business_registration_number,
+            password_two_digits
           },
         },
-      }
-    });
+      },
+    }
+  });
   ```
 </Tab>
 
 <Tab title="API 빌링키 발급 요청">
   ```javascript
   // ... 빌링키 발급
-    const issueResponse = await axios({
-      url: "https://api.portone.io/v2/billing-keys",
-      method: "post",
-      headers: { "Authorization": "Bearer " + access_token },
-      data: {
-        channel_key,
-        customer: {
-          customer_id,
-        },
-        payment_method_option: {
-          card: {
-            card_credential: {
-              card_number,
-              expiry_month,
-              expiry_year,
-              birth_or_business_registration_number,
-              password_two_digits
-            },
+  const issueResponse = await axios({
+    url: "https://api.portone.io/v2/billing-keys",
+    method: "post",
+    headers: { "Authorization": "Bearer " + access_token },
+    data: {
+      channel_key,
+      customer: {
+        customer_id,
+      },
+      payment_method_option: {
+        card: {
+          card_credential: {
+            card_number,
+            expiry_month,
+            expiry_year,
+            birth_or_business_registration_number,
+            password_two_digits
           },
         },
-      }
-    });
+      },
+    }
+  });
   ```
 </Tab>
 
 <Tab title="API 예약/반복 결제">
- ```javascript
-  async function schedulePayment() {
-    // 1. 포트원 API를 사용하기 위한 액세스 토큰 발급 받기를 진행해주세요.
-    // 2. 포트원 결제 예약 API 호출
-    const response = await axios({
-      url: `https://api.portone.io/v2/payments/${PAYMENT_ID_HERE}/schedules`,
-      method: "post",
-      // 1번에서 발급받은 액세스 토큰을 Bearer 형식에 맞게 넣어주세요.
-      headers: { Authorization: "Bearer " + access_token },
-      data: {
-        payment_id: UNIQUE_PAYMENT_ID,
-        billing_key: BILLING_KEY_HERE,
-        order_name: "월간 이용권 정기결제",
-        customer: {
-          customer_id: CUSTOMER_ID_HERE,
-          // 고객 정보가 필요한 경우 API 명세에 따라 추가해주세요.
-        },
-        total_amount: 8900,
-        currency: "KRW",
-        scheduled_at: "2023-08-24T14:15:22Z", // 결제를 시도할 시각
+
+```javascript
+async function schedulePayment() {
+  // 1. 포트원 API를 사용하기 위한 액세스 토큰 발급 받기를 진행해주세요.
+  // 2. 포트원 결제 예약 API 호출
+  const response = await axios({
+    url: `https://api.portone.io/v2/payments/${PAYMENT_ID_HERE}/schedules`,
+    method: "post",
+    // 1번에서 발급받은 액세스 토큰을 Bearer 형식에 맞게 넣어주세요.
+    headers: { Authorization: "Bearer " + access_token },
+    data: {
+      payment_id: UNIQUE_PAYMENT_ID,
+      billing_key: BILLING_KEY_HERE,
+      order_name: "월간 이용권 정기결제",
+      customer: {
+        customer_id: CUSTOMER_ID_HERE,
+        // 고객 정보가 필요한 경우 API 명세에 따라 추가해주세요.
       },
-    });
-    // 결제 예약 이후 로직을 구성해주세요.
+      total_amount: 8900,
+      currency: "KRW",
+      scheduled_at: "2023-08-24T14:15:22Z", // 결제를 시도할 시각
+    },
+  });
+  // 결제 예약 이후 로직을 구성해주세요.
 }
 ```
+
 </Tab>
 </Tabs>
 
@@ -328,7 +330,7 @@ KSNET 기준으로 작성한 예시 코드는 아래와 같습니다.
 - 에스크로 배송정보 등록/변경 API (POST `/payments/${PAYMENT_ID_HERE}/escrow/logis`)에 사용되는 배송정보 발송일시 `logistics_form.send_at` 파라미터는 ISO8601 형식으로 입력해야 합니다.
 
 <Details>
-<p slot="summary">ISO8601 형식 예시 </p>
+<p slot="summary">ISO8601 형식 예시</p>
 
 - YYYY-MM-DDTHH:mm:ssZ
 - YYYY-MM-DDTHH:mm:ss±hh:mm
