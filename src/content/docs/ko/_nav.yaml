@@ -114,6 +114,7 @@
         - /ko/pg/simple/payco
         - /ko/pg/simple/alipay
         - /ko/pg/simple/toss
+        - /ko/pg/simple/toss-brandpay/readme
 - label: 결과 처리
   items:
     - /ko/result/webhook
